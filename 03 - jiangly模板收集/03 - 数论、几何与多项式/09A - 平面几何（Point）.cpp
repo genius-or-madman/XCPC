@@ -1,11 +1,50 @@
-/**   平面几何（Point）
- *    2023-09-22: https://qoj.ac/submission/185408
-**/
+#include<bits/stdc++.h>
+using namespace std;
+
+using i64 = long long;
+using u64 = unsigned long long;
+using u32 = unsigned;
+
+using ld = long double;
+constexpr ld eps = 1e-9;
+
+template<class T>int sign(T x){
+    if(x<-eps) return -1;
+    else if(x>eps) return 1;
+    else return 0;
+}
+
+template<class T>int small(T a,T b){
+    if(sign(a-b)==-1) return 1;
+    else return 0;
+}
+
+template<class T>int smallequal(T a,T b){
+    if(sign(a-b)<=0) return 1;
+    else return 0;
+}
+
+template<class T>int big(T a,T b){
+    if(sign(a-b)==1) return 1;
+    else return 0;
+}
+
+template<class T>int bigequal(T a,T b){
+    if(sign(a-b)>=0) return 1;
+    else return 0;
+}
+
+template<class T>int equal(T a,T b){
+    if(sign(a-b)==0) return 1;
+    else return 0;
+}
+
 template<class T>
 struct Point {
     T x;
     T y;
     Point(const T &x_ = 0, const T &y_ = 0) : x(x_), y(y_) {}
+    
     
     template<class U>
     operator Point<U>() {
@@ -49,14 +88,22 @@ struct Point {
     friend Point operator*(const T &a, Point b) {
         return b *= a;
     }
-    friend bool operator==(const Point &a, const Point &b) {
-        return a.x == b.x && a.y == b.y;
-    }
     friend std::istream &operator>>(std::istream &is, Point &p) {
         return is >> p.x >> p.y;
     }
     friend std::ostream &operator<<(std::ostream &os, const Point &p) {
         return os << "(" << p.x << ", " << p.y << ")";
+    }
+
+
+    friend bool operator==(const Point &a, const Point &b) {
+        return equal(a.x,b.x) && equal(a.y,b.y);
+    }
+    friend bool operator<(const Point &a, const Point &b) {
+        return small(a.x,b.x)||(equal(a.x,b.x)&&small(a.y,b.y));
+    }
+    friend bool operator>(const Point &a, const Point &b) {
+        return big(a.x,b.x)||(equal(a.x,b.x)&&big(a.y,b.y));
     }
 };
 
@@ -99,7 +146,7 @@ Point<T> normalize(const Point<T> &p) {
 
 template<class T>
 bool parallel(const Line<T> &l1, const Line<T> &l2) {
-    return cross(l1.b - l1.a, l2.b - l2.a) == 0;
+    return equal(cross(l1.b - l1.a, l2.b - l2.a),T(0));
 }
 
 template<class T>
@@ -130,12 +177,12 @@ Point<T> rotate(const Point<T> &a) {
 
 template<class T>
 int sgn(const Point<T> &a) {
-    return a.y > 0 || (a.y == 0 && a.x > 0) ? 1 : -1;
+    return big(a.y , T(0)) || (equal(a.y , T(0)) && big(a.x , T(0))) ? 1 : -1;
 }
 
 template<class T>
 bool pointOnLineLeft(const Point<T> &p, const Line<T> &l) {
-    return cross(l.b - l.a, p - l.a) > 0;
+    return big(cross(l.b - l.a, p - l.a) , 0);
 }
 
 template<class T>
@@ -145,8 +192,8 @@ Point<T> lineIntersection(const Line<T> &l1, const Line<T> &l2) {
 
 template<class T>
 bool pointOnSegment(const Point<T> &p, const Line<T> &l) {
-    return cross(p - l.a, l.b - l.a) == 0 && std::min(l.a.x, l.b.x) <= p.x && p.x <= std::max(l.a.x, l.b.x)
-        && std::min(l.a.y, l.b.y) <= p.y && p.y <= std::max(l.a.y, l.b.y);
+    return equal(cross(p - l.a, l.b - l.a),T(0)) && smallequal(std::min(l.a.x, l.b.x) , p.x) && smallequal(p.x , std::max(l.a.x, l.b.x))
+        && smallequal(std::min(l.a.y, l.b.y) , p.y) && smallequal(p.y , std::max(l.a.y, l.b.y));
 }
 
 template<class T>
@@ -162,10 +209,10 @@ bool pointInPolygon(const Point<T> &a, const std::vector<Point<T>> &p) {
     for (int i = 0; i < n; i++) {
         auto u = p[i];
         auto v = p[(i + 1) % n];
-        if (u.x < a.x && v.x >= a.x && pointOnLineLeft(a, Line(v, u))) {
+        if (u.x < a.x && bigequal(v.x , a.x) && pointOnLineLeft(a, Line(v, u))) {
             t ^= 1;
         }
-        if (u.x >= a.x && v.x < a.x && pointOnLineLeft(a, Line(u, v))) {
+        if (bigequal(u.x , a.x) && v.x < a.x && pointOnLineLeft(a, Line(u, v))) {
             t ^= 1;
         }
     }
@@ -191,8 +238,9 @@ std::tuple<int, Point<T>, Point<T>> segmentIntersection(const Line<T> &l1, const
     if (std::min(l1.a.y, l1.b.y) > std::max(l2.a.y, l2.b.y)) {
         return {0, Point<T>(), Point<T>()};
     }
-    if (cross(l1.b - l1.a, l2.b - l2.a) == 0) {
-        if (cross(l1.b - l1.a, l2.a - l1.a) != 0) {
+
+    if (equal(cross(l1.b - l1.a, l2.b - l2.a) , T(0))) {
+        if (!equal(l1.b - l1.a, l2.a - l1.a , T(0))) {
             return {0, Point<T>(), Point<T>()};
         } else {
             auto maxx1 = std::max(l1.a.x, l1.b.x);
@@ -225,7 +273,7 @@ std::tuple<int, Point<T>, Point<T>> segmentIntersection(const Line<T> &l1, const
     }
     
     Point p = lineIntersection(l1, l2);
-    if (cp1 != 0 && cp2 != 0 && cp3 != 0 && cp4 != 0) {
+    if (!equal(cp1,T(0)) && !equal(cp2,T(0)) && !equal(cp3,T(0)) && !equal(cp4,T(0))) {
         return {1, p, p};
     } else {
         return {3, p, p};
@@ -348,7 +396,7 @@ std::vector<Point<T>> hp(std::vector<Line<T>> lines) {
             ls.pop_front();
         }
         
-        if (cross(l.b - l.a, ls.back().b - ls.back().a) == 0) {
+        if (equal(cross(l.b - l.a, ls.back().b - ls.back().a),T(0))) {
             if (dot(l.b - l.a, ls.back().b - ls.back().a) > 0) {
                 
                 if (!pointOnLineLeft(ls.back().a, l)) {
@@ -376,7 +424,103 @@ std::vector<Point<T>> hp(std::vector<Line<T>> lines) {
     return std::vector(ps.begin(), ps.end());
 }
 
-using real = long double;
-using P = Point<real>;
 
-constexpr real eps = 0;
+template<class T>double Area(vector<Point<T>>pt){
+    int n=pt.size();
+
+    double res=0;
+    for(int i=0;i<n;++i){
+        res+=cross(pt[i],pt[(i+1)%n]);
+    }
+
+    return abs(res)/2;
+}
+
+//点数为凸包点数+1
+template<class T>vector<Point<T>>Andrew(vector<Point<T>>pt){
+    sort(pt.begin(),pt.end());
+
+    int n=pt.size();
+    int cnt=1;
+    vector<Point<T>>con;
+    for(int i=0;i<n;++i){
+        while(con.size()>cnt){
+            int have=con.size();
+
+            auto p0=pt[i];
+            auto p1=con[have-1];
+            auto p2=con[have-2];
+            if(small(cross(p1-p2,p0-p2),T(0))) con.pop_back();
+            else break;
+        }
+        con.push_back(pt[i]);
+    }
+    cnt=con.size();
+
+    for(int i=n-2;i>=0;--i){
+        while(con.size()>cnt){
+            int have=con.size();
+
+            auto p0=pt[i];
+            auto p1=con[have-1];
+            auto p2=con[have-2];
+            if(small(cross(p1-p2,p0-p2),T(0))) con.pop_back();
+            else break;
+        }
+        con.push_back(pt[i]);
+    }
+    cnt=con.size();
+
+    return con;
+}
+
+//直径的平方
+template<class T>T Diameter(vector<Point<T>>pt){
+    auto con=Andrew(pt);
+    int cnt=con.size();
+
+    if(cnt==3) return square(con[0]-con[1]);
+    
+    T res=0;
+    for(int i=1,j=0;i<cnt;++i){
+        while(1){
+            vector<Point<T>>pt1;
+            pt1.push_back(con[i-1]);
+            pt1.push_back(con[i]);
+            pt1.push_back(con[(j+1)%cnt]);
+
+            vector<Point<T>>pt2;
+            pt2.push_back(con[i-1]);
+            pt2.push_back(con[i]);
+            pt2.push_back(con[j%cnt]);
+
+            if(bigequal(Area(pt1)-Area(pt2),0.0)) ++j;
+            else break;
+        }
+
+        res=max(square(con[i-1]-con[j%cnt]),res);
+        res=max(square(con[i]-con[j%cnt]),res);
+    }
+
+    return res;
+}
+
+void solve(){
+    int n;
+    cin>>n;
+    vector pt(n,Point<int>());
+    for(int i=0;i<n;++i) cin>>pt[i];
+
+    cout<<Diameter(pt)<<"\n";
+}
+
+signed main(){
+    ios::sync_with_stdio(0);
+    cin.tie(0);
+
+    int T=1;
+    //cin>>T;
+    while(T--) solve();
+
+    return 0;
+}
